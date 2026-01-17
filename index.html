@@ -351,10 +351,19 @@
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
 
       if (error) {
-        msg.innerText = error.message;
-        if (error.message.includes("Invalid login")) {
-          msg.innerText = "Invalid Email or Password.";
+        msg.className = "error-msg";
+
+        // Check for specific error types
+        if (error.message.includes("Invalid login") || error.message.includes("invalid")) {
+          msg.innerText = "❌ Invalid email or password.";
+        } else if (error.message.includes("Email not confirmed")) {
+          msg.innerText = "⚠️ Please confirm your email first. Check your inbox.";
+        } else if (error.message.includes("not found") || error.message.includes("User not found")) {
+          msg.innerText = "❌ Account not found. Please check your email or register.";
+        } else {
+          msg.innerText = "Error: " + error.message;
         }
+
         btn.innerText = "Login / Start";
         btn.disabled = false;
       } else {
@@ -446,8 +455,12 @@
 
         if (error) {
           msg.className = "error-msg";
-          if (error.message.includes('not found') || error.message.includes('User')) {
-            msg.innerText = "Email not registered. Please check and try again.";
+
+          // Check specific error types
+          if (error.message.includes('not found') || error.message.includes('User not found') || error.message.includes('Signups not allowed')) {
+            msg.innerText = "❌ Email not registered. Please check your email or create an account.";
+          } else if (error.message.includes('Email not confirmed')) {
+            msg.innerText = "⚠️ Please confirm your email first before resetting password.";
           } else {
             msg.innerText = "Error: " + error.message;
           }
