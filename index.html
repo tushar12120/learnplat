@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login / Register - ITI HTML Learning Platform</title>
+
+  <!-- SUPABASE IMPORTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --accent-primary: #3b82f6;
+      --accent-hover: #2563eb;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      background-image: radial-gradient(circle at top right, #1e293b 0%, #0f172a 100%);
+    }
+
+    .auth-container {
+      position: relative;
+      width: 450px;
+      perspective: 1000px;
+    }
+
+    .auth-box {
+      background: rgba(30, 41, 59, 0.7);
+      padding: 3rem;
+      border-radius: 20px;
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(20px);
+      text-align: center;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .auth-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #ec4899);
+    }
+
+    h1 {
+      margin-bottom: 0.5rem;
+      font-size: 2rem;
+      background: linear-gradient(to right, #fff, #cbd5e1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.2rem;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid #334155;
+      color: white;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    input:focus {
+      border-color: var(--accent-primary);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    button.primary-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+    }
+
+    button.primary-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+    }
+
+    button.primary-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--accent-primary);
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.9rem;
+      padding: 0;
+    }
+
+    .switch-text {
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error-msg {
+      color: #ef4444;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      min-height: 20px;
+    }
+
+    .success-msg {
+      color: #4ade80;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="auth-container">
+
+    <!-- LOGIN VIEW -->
+    <div id="login-view" class="auth-box">
+      <h1>Welcome Back</h1>
+      <p>Login to continue your learning</p>
+
+      <div class="input-group">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="student@iti.com">
+      </div>
+
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••">
+        <div style="text-align: right; margin-top: 5px;">
+          <button class="link-btn" onclick="handleResetPassword()" style="font-size: 0.8rem;">Forgot Password?</button>
+        </div>
+      </div>
+
+      <button id="login-btn" class="primary-btn" onclick="handleLogin()">Login / Start</button>
+
+      <div class="switch-text">
+        Don't have an account?
+        <button class="link-btn" onclick="showRegister()">Register Here</button>
+      </div>
+
+      <div id="login-msg" class="error-msg"></div>
+    </div>
+
+    <!-- REGISTER VIEW -->
+    <div id="register-view" class="auth-box hidden">
+      <h1>Create Account</h1>
+      <p>Start your journey today</p>
+
+      <div class="input-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Rahul Kumar">
+      </div>
+
+      <div class="input-group">
+        <label>Email Address</label>
+        <input type="email" id="reg-email" placeholder="student@iti.com">
+      </div>
+
+      <div class="input-group">
+        <label>New Password</label>
+        <input type="password" id="reg-pass" placeholder="••••••••">
+      </div>
+
+      <button id="reg-btn" class="primary-btn" onclick="handleRegister()">Sign Up</button>
+
+      <div class="switch-text">
+        Already have an account?
+        <button class="link-btn" onclick="showLogin()">Login Here</button>
+      </div>
+
+      <div id="reg-msg" class="error-msg"></div>
+    </div>
+
+    <!-- FORGOT PASSWORD VIEW -->
+    <div id="forgot-password-view" class="auth-box hidden">
+      <h1>Reset Password 🔐</h1>
+      <p>We'll send an OTP to your registered email</p>
+
+      <div id="forgot-step-1">
+        <div class="input-group">
+          <label>Email Address</label>
+          <input type="email" id="forgot-email" placeholder="student@iti.com">
+        </div>
+
+        <button class="primary-btn" onclick="sendOTPForgotPassword()">Send OTP</button>
+
+        <div class="switch-text">
+          Remember your password?
+          <button class="link-btn" onclick="showLogin()">Login Here</button>
+        </div>
+      </div>
+
+      <div id="forgot-step-2" class="hidden">
+        <div style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; margin-bottom: 15px;">
+          <p style="margin: 0; font-size: 0.9rem; color: #60a5fa;">
+            📧 OTP sent to <span id="forgot-email-display"></span>
+          </p>
+        </div>
+
+        <div class="input-group">
+          <label>Enter 8-Digit OTP</label>
+          <input type="text" id="forgot-otp" placeholder="Enter 8-digit code" maxlength="8">
+        </div>
+
+        <button class="primary-btn" onclick="verifyOTPOnly()">Verify OTP</button>
+
+        <div class="switch-text">
+          <button class="link-btn" onclick="showForgotPasswordStep1()">← Back to email</button>
+        </div>
+      </div>
+
+      <div id="forgot-step-3" class="hidden">
+        <div style="padding: 10px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; margin-bottom: 15px;">
+          <p style="margin: 0; font-size: 0.9rem; color: #4ade80;">
+            ✅ OTP Verified! Now set your new password.
+          </p>
+        </div>
+
+        <div class="input-group">
+          <label>New Password</label>
+          <input type="password" id="forgot-new-pass" placeholder="Enter new password">
+        </div>
+
+        <div class="input-group">
+          <label>Confirm Password</label>
+          <input type="password" id="forgot-confirm-pass" placeholder="Confirm new password">
+        </div>
+
+        <button class="primary-btn" onclick="updatePasswordAfterVerification()">Update Password</button>
+      </div>
+
+      <div id="forgot-msg" class="error-msg"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- APP STATE ---
+    function showRegister() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('register-view').classList.remove('hidden');
+    }
+    function showLogin() {
+      document.getElementById('register-view').classList.add('hidden');
+      document.getElementById('login-view').classList.remove('hidden');
+    }
+
+    // --- SUPABASE SESSION CHECK ---
+    async function checkSession() {
+      const waitForClient = setInterval(async () => {
+        if (typeof supabaseClient !== 'undefined') {
+          clearInterval(waitForClient);
+          const { data: { session } } = await supabaseClient.auth.getSession();
+          if (session) {
+            window.location.href = 'app.html';
+          }
+        }
+      }, 100);
+    }
+    checkSession();
+
+    // --- HANDLERS ---
+
+    // 1. LOGIN
+    async function handleLogin() {
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-pass').value;
+      const msg = document.getElementById('login-msg');
+      const btn = document.getElementById('login-btn');
+
+      if (!email || !pass) {
+        msg.innerText = "Please enter both Email and Password.";
+        return;
+      }
+
+      msg.innerText = "";
+      btn.innerText = "Checking...";
+      btn.disabled = true;
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+
+      if (error) {
+        msg.innerText = error.message;
+        if (error.message.includes("Invalid login")) {
+          msg.innerText = "Invalid Email or Password.";
+        }
+        btn.innerText = "Login / Start";
+        btn.disabled = false;
+      } else {
+        btn.innerText = "Success! Redirecting...";
+        setTimeout(() => window.location.href = 'app.html', 1000);
+      }
+    }
+
+    // 2. REGISTER
+    async function handleRegister() {
+      const name = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+      const pass = document.getElementById('reg-pass').value;
+      const msg = document.getElementById('reg-msg');
+      const btn = document.getElementById('reg-btn');
+
+      if (!name || !email || !pass) {
+        msg.innerText = "All fields are required.";
+        return;
+      }
+
+      msg.innerText = "";
+      btn.innerText = "Creating Account...";
+      btn.disabled = true;
+
+      // Sign Up with Meta Data (Name)
+      const { data, error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: pass,
+        options: {
+          data: {
+            full_name: name
+          }
+        }
+      });
+
+      if (error) {
+        msg.innerText = error.message;
+        btn.innerText = "Sign Up";
+        btn.disabled = false;
+      } else {
+        if (data.user && !data.session) {
+          msg.className = "success-msg";
+          msg.innerText = "Registration Successful! Please check your email to confirm.";
+          btn.innerText = "Check Email";
+        } else {
+          msg.className = "success-msg";
+          msg.innerText = "Account Created! Redirecting...";
+          setTimeout(() => window.location.href = 'app.html', 1500);
+        }
+      }
+    }
+
+    // 3. FORGOT PASSWORD - OTP FLOW
+    function handleResetPassword() {
+      // Show forgot password view
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('forgot-password-view').classList.remove('hidden');
+      document.getElementById('forgot-step-1').classList.remove('hidden');
+      document.getElementById('forgot-step-2').classList.add('hidden');
+    }
+
+    function showForgotPasswordStep1() {
+      document.getElementById('forgot-step-1').classList.remove('hidden');
+      document.getElementById('forgot-step-2').classList.add('hidden');
+      document.getElementById('forgot-msg').innerText = '';
+    }
+
+    async function sendOTPForgotPassword() {
+      const email = document.getElementById('forgot-email').value;
+      const msg = document.getElementById('forgot-msg');
+
+      if (!email || !email.includes('@')) {
+        msg.className = "error-msg";
+        msg.innerText = "Please enter a valid email address.";
+        return;
+      }
+
+      msg.className = "success-msg";
+      msg.innerText = "Sending OTP...";
+
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithOtp({
+          email: email,
+          options: {
+            shouldCreateUser: false // Only send OTP to registered emails
+          }
+        });
+
+        if (error) {
+          msg.className = "error-msg";
+          if (error.message.includes('not found') || error.message.includes('User')) {
+            msg.innerText = "Email not registered. Please check and try again.";
+          } else {
+            msg.innerText = "Error: " + error.message;
+          }
+        } else {
+          msg.className = "success-msg";
+          msg.innerText = "OTP sent successfully! Check your email.";
+
+          // Show step 2
+          document.getElementById('forgot-email-display').innerText = email;
+          document.getElementById('forgot-step-1').classList.add('hidden');
+          document.getElementById('forgot-step-2').classList.remove('hidden');
+        }
+      } catch (err) {
+        msg.className = "error-msg";
+        msg.innerText = "Failed to send OTP. Please try again.";
+        console.error(err);
+      }
+    }
+
+    // STEP 2: Verify OTP only
+    async function verifyOTPOnly() {
+      const email = document.getElementById('forgot-email').value;
+      const otp = document.getElementById('forgot-otp').value.trim();
+      const msg = document.getElementById('forgot-msg');
+
+      if (!otp || otp.length < 6) {
+        msg.className = "error-msg";
+        msg.innerText = "Please enter the 8-digit OTP sent to your email.";
+        return;
+      }
+
+      msg.className = "success-msg";
+      msg.innerText = "Verifying OTP...";
+
+      try {
+        const { data, error } = await supabaseClient.auth.verifyOtp({
+          email: email,
+          token: otp,
+          type: 'email'
+        });
+
+        if (error) {
+          msg.className = "error-msg";
+          if (error.message.includes('expired')) {
+            msg.innerText = "OTP has expired. Please request a new one.";
+            setTimeout(() => showForgotPasswordStep1(), 2000);
+          } else if (error.message.includes('invalid')) {
+            msg.innerText = "Invalid OTP. Please check and try again.";
+          } else {
+            msg.innerText = "Error: " + error.message;
+          }
+          return;
+        }
+
+        // OTP verified! Show step 3 for password
+        msg.className = "success-msg";
+        msg.innerText = "✅ OTP Verified!";
+
+        setTimeout(() => {
+          document.getElementById('forgot-step-2').classList.add('hidden');
+          document.getElementById('forgot-step-3').classList.remove('hidden');
+          msg.innerText = '';
+        }, 1000);
+
+      } catch (err) {
+        msg.className = "error-msg";
+        msg.innerText = "An error occurred. Please try again.";
+        console.error(err);
+      }
+    }
+
+    // STEP 3: Update password after OTP verification
+    async function updatePasswordAfterVerification() {
+      const newPass = document.getElementById('forgot-new-pass').value;
+      const confirmPass = document.getElementById('forgot-confirm-pass').value;
+      const msg = document.getElementById('forgot-msg');
+
+      // Validation
+      if (!newPass || newPass.length < 6) {
+        msg.className = "error-msg";
+        msg.innerText = "Password must be at least 6 characters long.";
+        return;
+      }
+
+      if (newPass !== confirmPass) {
+        msg.className = "error-msg";
+        msg.innerText = "Passwords do not match!";
+        return;
+      }
+
+      msg.className = "success-msg";
+      msg.innerText = "Updating password...";
+
+      try {
+        const { error } = await supabaseClient.auth.updateUser({
+          password: newPass
+        });
+
+        if (error) {
+          msg.className = "error-msg";
+          msg.innerText = "Failed to update password: " + error.message;
+        } else {
+          msg.className = "success-msg";
+          msg.innerText = "✅ Password reset successful! Redirecting to login...";
+
+          // Clear fields and redirect
+          setTimeout(() => {
+            document.getElementById('forgot-password-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('login-msg').className = "success-msg";
+            document.getElementById('login-msg').innerText = "Password updated! Please login with your new password.";
+
+            // Clear forgot password fields
+            document.getElementById('forgot-email').value = '';
+            document.getElementById('forgot-otp').value = '';
+            document.getElementById('forgot-new-pass').value = '';
+            document.getElementById('forgot-confirm-pass').value = '';
+          }, 2000);
+        }
+      } catch (err) {
+        msg.className = "error-msg";
+        msg.innerText = "An error occurred. Please try again.";
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+
+</html>

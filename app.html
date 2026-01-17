@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITI HTML Learning Platform (Lite)</title>
+
+  <!-- SUPABASE IMPORTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+
+  <style>
+    /* VARIABLES */
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-primary: #3b82f6;
+      --accent-hover: #2563eb;
+      --border-color: #334155;
+      --radius-md: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* LAYOUT */
+    .sidebar {
+      width: 260px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+    .highlight {
+      color: var(--accent-primary);
+    }
+
+    .nav-group {
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .nav-btn {
+      width: 100%;
+      text-align: left;
+      padding: 0.75rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      margin-bottom: 0.5rem;
+      transition: 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-tertiary);
+      color: white;
+    }
+
+    .nav-btn.active {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--accent-primary);
+      font-weight: bold;
+      border-left: 3px solid var(--accent-primary);
+    }
+
+    .nav-btn.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+      /* Prevent clicking */
+      position: relative;
+    }
+
+    .nav-btn.locked::after {
+      content: '🔒';
+      position: absolute;
+      right: 10px;
+      font-size: 0.8rem;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .top-bar {
+      height: 60px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+
+    /* COMPONENTS */
+    .level-container {
+      display: none;
+    }
+
+    .level-container.active {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .theory-box {
+      background: var(--bg-secondary);
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 1rem;
+    }
+
+    .theory-box h2 {
+      margin-bottom: 1rem;
+      color: white;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    .theory-box h3 {
+      margin: 1rem 0 0.5rem 0;
+      color: var(--text-primary);
+    }
+
+    .theory-box p,
+    .theory-box li {
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .theory-box ul {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+      color: #e2e8f0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+      text-align: left;
+    }
+
+    th {
+      background: var(--bg-tertiary);
+      color: white;
+    }
+
+    /* EDITOR */
+    .editor-wrapper {
+      display: flex;
+      height: 500px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .editor-pane,
+    .preview-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pane-header {
+      background: var(--bg-tertiary);
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .code-input {
+      flex: 1;
+      background: #1e1e1e;
+      border: none;
+      color: #d4d4d4;
+      padding: 1rem;
+      font-family: monospace;
+      resize: none;
+      border-right: 1px solid var(--border-color);
+    }
+
+    iframe {
+      flex: 1;
+      border: none;
+      background: white;
+    }
+
+    /* SUPABASE AUTH STYLES */
+    .auth-btn {
+      background: var(--accent-primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin-left: auto;
+      transition: all 0.2s;
+    }
+
+    .auth-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .auth-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .auth-box {
+      background: rgba(30, 41, 59, 0.95);
+      padding: 2.5rem;
+      border-radius: 16px;
+      width: 400px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Top decoration line */
+    .auth-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+    }
+
+    .auth-input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      color: white;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+
+    .auth-input:focus {
+      border-color: var(--accent-primary);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    /* ANTI-CHEATING STYLES */
+    .blurred-content {
+      filter: blur(8px);
+      pointer-events: none;
+      user-select: none;
+      opacity: 0.5;
+      transition: all 0.5s ease;
+    }
+
+    .exam-btn {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s;
+      display: block;
+      margin: 2rem auto;
+      width: fit-content;
+    }
+
+    .exam-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .challenge-section {
+      display: none;
+      /* Hidden initially */
+      margin-top: 2rem;
+      border-top: 2px dashed var(--border-color);
+      padding-top: 2rem;
+      animation: slideDown 0.5s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* CUSTOM MODAL STYLES */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .exam-modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 2rem;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .exam-modal h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    .exam-modal p {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: #333;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes zoomIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+
+    .exam-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .challenge-section {
+      display: none;
+      /* Hidden initially */
+      margin-top: 2rem;
+      border-top: 2px dashed var(--border-color);
+      padding-top: 2rem;
+      animation: slideDown 0.5s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* CUSTOM MODAL STYLES */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .exam-modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 2rem;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .exam-modal h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    .exam-modal p {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: #333;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes zoomIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">ITI HTML <span class="highlight">Platform</span></div>
+    <div class="nav-group">
+      <button class="nav-btn active" id="btn-1" onclick="showLevel(1)">1. Intro & History</button>
+      <button class="nav-btn locked" id="btn-2" onclick="showLevel(2)">2. Basic Elements</button>
+      <button class="nav-btn locked" id="btn-3" onclick="showLevel(3)">3. Attributes & Styles</button>
+      <button class="nav-btn locked" id="btn-4" onclick="showLevel(4)">4. Forms & Inputs</button>
+      <button class="nav-btn locked" id="btn-5" onclick="showLevel(5)">5. Lists & Tables</button>
+      <button class="nav-btn locked" id="btn-6" onclick="showLevel(6)">6. Div & Span</button>
+      <button class="nav-btn locked" id="btn-7" onclick="showLevel(7)">7. Metadata & Head</button>
+      <button class="nav-btn locked" id="btn-8" onclick="showLevel(8)">8. Complete Project</button>
+    </div>
+
+    <!-- SIDEBAR FOOTER -->
+    <div style="margin-top: auto; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+      <button onclick="showLeaderboard()" class="nav-btn"
+        style="margin-top:5px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24;">
+        🏆 Leaderboard
+      </button>
+      <button onclick="showProfile()" class="nav-btn"
+        style="margin-top:5px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa;">
+        👤 My Profile
+      </button>
+      <button onclick="handleLogout()" class="nav-btn"
+        style="margin-top:5px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171;">
+        🚪 Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="top-bar">
+      <span>Status: Lite Version (Online Sync 🟢)</span>
+      <div id="authActions" style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+        <!-- Filled dynamically by JS -->
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- LEVEL 1 -->
+      <div id="level-1" class="level-container active">
+        <h1 class="text-4xl text-white">1. Introduction to HTML (परिचय)</h1>
+
+        <div id="learn-content-1">
+          <div class="theory-box">
+            <h2>What is HTML? (HTML क्या है?)</h2>
+            <p>HTML का मतलब <strong>Hyper Text Markup Language</strong> है। यह वेबसाइट बनाने की मानक भाषा है।</p>
+            <ul>
+              <li>HTML वेब पेज के <strong>Structure (ढांचे)</strong> को बनाता है।</li>
+              <li>HTML में कई सारे <strong>Elements (तत्व)</strong> होते हैं।</li>
+              <li>यह ब्राउज़र को बताता है कि कंटेंट को कैसे दिखाना है (जैसे "यह हेडिंग है", "यह पैराग्राफ है")।</li>
+            </ul>
+          </div>
+
+          <div class="theory-box">
+            <h2>A Simple HTML Document (साधारण उदाहरण)</h2>
+            <p>हर HTML पेज का एक ढांचा होता है:</p>
+            <ul>
+              <li><code>&lt;!DOCTYPE html&gt;</code>: यह बताता है कि यह HTML5 डॉक्यूमेंट है।</li>
+              <li><code>&lt;html&gt;</code>: यह पेज का मुख्य (Root) एलिमेंट है।</li>
+              <li><code>&lt;head&gt;</code>: इसमें पेज की जानकारी (जैसे Title) होती है।</li>
+              <li><code>&lt;title&gt;</code>: <strong>Browser Tab</strong> का नाम सेट करता है (Head के अंदर)।</li>
+              <li><code>&lt;body&gt;</code>: यूजर को दिखने वाला कंटेंट यहाँ आता है।</li>
+            </ul>
+            <h3>Important Tags:</h3>
+            <ul>
+              <li><code>&lt;h1&gt;</code>: <strong>Sabse Badi Heading</strong>. Page ka main title.</li>
+              <li><code>&lt;p&gt;</code>: Paragraph text.</li>
+            </ul>
+          </div>
+
+          <div class="theory-box">
+            <h2>HTML History (इतिहास)</h2>
+            <table>
+              <tr>
+                <th>Year</th>
+                <th>Event (घटना)</th>
+              </tr>
+              <tr>
+                <td>1991</td>
+                <td>Tim Berners-Lee ने HTML का आविष्कार किया</td>
+              </tr>
+              <tr>
+                <td>1999</td>
+                <td>HTML 4.01 आया</td>
+              </tr>
+              <tr>
+                <td>2014</td>
+                <td>HTML5 (जो हम आज इस्तेमाल करते हैं)</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="editor-wrapper">
+            <div class="editor-pane">
+              <div class="pane-header">Example Code (Udaharan) - Read Only</div>
+              <textarea class="code-input" readonly style="background:#2d2d2d; color:#aaa;">
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Meri Pehli Website</title>
+</head>
+<body>
+
+<h1>Mera Pehla Heading</h1>
+<p>Yeh mera pehla paragraph hai.</p>
+
+</body>
+</html></textarea>
+            </div>
+            <div class="preview-pane">
+              <div class="pane-header">Example Preview</div>
+              <iframe id="preview1" src="about:blank"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <!-- START EXAM BUTTON -->
+        <button id="start-btn-1" class="exam-btn" onclick="startExam(1)">⚡ Take Test to Unlock Level 2</button>
+
+        <!-- CHALLENGE SECTION Level 1 -->
+        <div id="challenge-1" class="challenge-section">
+          <div class="theory-box"
+            style="border: 2px solid var(--accent-primary); background: rgba(59, 130, 246, 0.05);">
+            <h2>🎯 Level 1 Exam: HTML Structure</h2>
+            <p><strong>Challenge:</strong> Ek <strong>Complete HTML Page</strong> banayein jisme yeh sab zaroori hai:
+            </p>
+            <ul style="list-style-type: none;">
+              <li>✅ <code>&lt;!DOCTYPE html&gt;</code> aur <code>&lt;html&gt;</code> tags.</li>
+              <li>✅ <code>&lt;head&gt;</code> tag jisme <code>&lt;title&gt; Exam Pass &lt;/title&gt;</code> ho.</li>
+              <li>✅ <code>&lt;body&gt;</code> tag jisme ek <code>&lt;h1&gt;</code> heading ho.</li>
+            </ul>
+
+            <div class="editor-wrapper">
+              <div class="editor-pane">
+                <div class="pane-header">Your Answer (Yahan Code Likhein)</div>
+                <textarea id="exam-input-1" class="code-input"
+                  oninput="updatePreview(this, 'exam-preview-1')"></textarea>
+              </div>
+              <div class="preview-pane">
+                <div class="pane-header">Your Preview</div>
+                <iframe id="exam-preview-1" src="about:blank"></iframe>
+              </div>
+            </div>
+
+            <button onclick="checkLevel1()"
+              style="background: var(--accent-primary); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px;">
+              Submit & Unlock Level 2 🔓
+            </button>
+            <div id="result-1" style="margin-top: 10px; font-weight: bold;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL 2 -->
+      <div id="level-2" class="level-container">
+        <h1 class="text-4xl text-white">2. Basic HTML Elements</h1>
+
+        <div id="learn-content-2">
+          <div class="theory-box">
+            <h2>Anatomy of an Element</h2>
+            <p>An HTML element is defined by a start tag, content, and an end tag:</p>
+            <p><code>&lt;tagname&gt; Content goes here... &lt;/tagname&gt;</code></p>
+
+            <h3>Nested Elements</h3>
+            <p>Elements can be inside other elements. All HTML documents consist of nested elements (e.g.,
+              <code>&lt;p&gt;</code> inside <code>&lt;body&gt;</code>).
+            </p>
+          </div>
+
+          <!-- Headings & Paragraphs -->
+          <div class="theory-box">
+            <h2>HTML Headings (शीर्षक)</h2>
+            <p>Headings help search engines index your content.</p>
+            <p><em>Headings content को structure देने के लिए होते हैं।</em></p>
+            <ul>
+              <li><code>&lt;h1&gt;</code>: Main Heading (सबसे बड़ा शीर्षक).</li>
+              <li><code>&lt;h2&gt;</code>: Section Headings.</li>
+              <li><code>&lt;h3&gt;</code> - <code>&lt;h6&gt;</code>: Sub-sections.</li>
+            </ul>
+          </div>
+
+          <!-- Text Formatting -->
+          <div class="theory-box">
+            <h2>Text Formatting (टेक्स्ट फॉर्मेटिंग)</h2>
+            <p>Elements to display special types of text:</p>
+            <p><em>टेक्स्ट को विशेष रूप से दिखाने के लिए इनका उपयोग करें:</em></p>
+            <ul>
+              <li><code>&lt;b&gt;</code> / <code>&lt;strong&gt;</code>: <strong>Bold (मोटा)</strong> text.</li>
+              <li><code>&lt;i&gt;</code> / <code>&lt;em&gt;</code>: <em>Italic (तिरछा)</em> text.</li>
+              <li><code>&lt;mark&gt;</code>: <mark>Highlight (हाइलाइट)</mark> text.</li>
+              <li><code>&lt;sub&gt;</code>: Subscript (<sub>H2O</sub>).</li>
+              <li><code>&lt;sup&gt;</code>: Superscript (<sup>1st</sup>).</li>
+              <li><code>&lt;del&gt;</code>: <del>Deleted (काटा हुआ)</del>.</li>
+            </ul>
+          </div>
+
+          <!-- Quotations & Comments -->
+          <div class="theory-box">
+            <h2>Quotations & Comments (उद्धरण और टिप्पणियाँ)</h2>
+            <ul>
+              <li><code>&lt;q&gt;</code>: Short quote (छोटा उद्धरण).</li>
+              <li><code>&lt;blockquote&gt;</code>: Long quote section (बड़ा उद्धरण).</li>
+              <li><code>&lt;abbr&gt;</code>: Abbreviation (लघु रूप) eg. WHO.</li>
+              <li><code>&lt;!-- Comment --&gt;</code>: Hidden notes (छिपी हुई टिप्पणियाँ).</li>
+            </ul>
+          </div>
+
+          <div class="theory-box">
+            <h2>Empty Elements</h2>
+            <p>Elements with no content are called empty elements. They do not have an end tag.</p>
+            <p>Example: <code>&lt;br&gt;</code> inserts a line break.</p>
+            <p><em>Note: HTML is NOT case sensitive, but lowercase is recommended.</em></p>
+          </div>
+
+          <div class="editor-wrapper">
+            <div class="editor-pane">
+              <div class="pane-header">Example Code (Read Only)</div>
+              <textarea class="code-input" readonly style="background:#2d2d2d; color:#aaa;"><h1>Text Formatting</h1>
+<hr>
+
+<p>This is <b>Bold</b> and <i>Italic</i>.</p>
+
+<p>Do not forget to buy <mark>Milk</mark>.</p>
+
+<p>Chemical Formula: H<sub>2</sub>O</p>
+
+<!-- This is a comment, it wont show up -->
+
+<blockquote>
+  "Experience is the name everyone gives to their mistakes."
+</blockquote></textarea>
+            </div>
+            <div class="preview-pane">
+              <div class="pane-header">Example Preview</div>
+              <iframe id="preview2" src="about:blank"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <!-- START EXAM BUTTON -->
+        <button id="start-btn-2" class="exam-btn" onclick="startExam(2)">⚡ Take Test to Unlock Level 3</button>
+
+        <!-- CHALLENGE LEVEL 2 -->
+        <div id="challenge-2" class="challenge-section">
+          <div class="theory-box"
+            style="border: 2px solid var(--accent-primary); background: rgba(59, 130, 246, 0.05);">
+            <h2>🎯 Level 2 Exam: Elements</h2>
+            <p><strong>Challenge:</strong> Ek <strong>Complete HTML Page</strong> banayein jisme Body ke andar:</p>
+            <ul>
+              <li>✅ Ek <code>&lt;h2&gt;</code> heading ho.</li>
+              <li>✅ Uske niche ek <code>&lt;hr&gt;</code> line ho.</li>
+            </ul>
+
+            <div class="editor-wrapper">
+              <div class="editor-pane">
+                <div class="pane-header">Your Answer</div>
+                <textarea id="exam-input-2" class="code-input"
+                  oninput="updatePreview(this, 'exam-preview-2')"></textarea>
+              </div>
+              <div class="preview-pane">
+                <div class="pane-header">Your Preview</div>
+                <iframe id="exam-preview-2" src="about:blank"></iframe>
+              </div>
+            </div>
+
+            <button onclick="checkLevel2()"
+              style="background: var(--accent-primary); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Submit
+              🔓</button>
+            <div id="result-2" style="margin-top:10px; font-weight:bold;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL 3 -->
+      <div id="level-3" class="level-container">
+        <h1 class="text-4xl text-white">3. Attributes & Media</h1>
+
+        <!-- Attributes -->
+        <div class="theory-box">
+          <h2>HTML Attributes (विशेषताएँ)</h2>
+          <p>Attributes provide extra info. Always in the <strong>start tag</strong>.</p>
+          <p><em>Attributes हमेशा स्टार्ट टैग में लिखे जाते हैं।</em></p>
+
+          <ul>
+            <li><strong>href</strong>: URL for links (लिंक का पता).</li>
+            <li><strong>src</strong>: Path for images (इमेज का रास्ता).</li>
+            <li><strong>alt</strong>: Alternate text (वैकल्पिक टेक्स्ट).</li>
+            <li><strong>title</strong>: Tooltip on hover (माउस ले जाने पर दिखने वाला टेक्स्ट).</li>
+          </ul>
+        </div>
+        <div id="learn-content-3">
+          <div class="theory-box">
+            <h2>HTML Attributes</h2>
+            <p>Attributes elements ke baare mein extra jaankari dete hain. Ye hamesha <strong>start tag</strong> mein
+              aate
+              hain.</p>
+            <ul>
+              <li><code>href</code>: Link ka pata batata hai (Anchor tag ke liye).</li>
+              <li><code>src</code>: Image ka source batata hai.</li>
+              <li><code>width</code> and <code>height</code>: Image ka size set karte hain.</li>
+              <li><code>alt</code>: Image agar load na ho to ye text dikhta hai.</li>
+              <li><code>style</code>: Element ka color, font, etc. set karne ke liye.</li>
+              <li><code>lang</code>: Page ki bhasha batata hai (html tag mein).</li>
+              <li><code>title</code>: Tooltip text dikhata hai.</li>
+            </ul>
+          </div>
+
+          <div class="theory-box">
+            <h2>Styles (CSS in HTML)</h2>
+            <p><code>style</code> attribute se hum design badal sakte hain:</p>
+            <p><code>style="property:value;"</code></p>
+            <ul>
+              <li><code>color: blue;</code> (Text ka rang)</li>
+              <li><code>background-color: yellow;</code> (Piche ka rang)</li>
+              <li><code>font-size: 20px;</code> (Akshar ka size)</li>
+            </ul>
+          </div>
+
+          <div class="editor-wrapper">
+            <div class="editor-pane">
+              <div class="pane-header">Example Code (Read Only)</div>
+              <textarea class="code-input" readonly style="background:#2d2d2d; color:#aaa;"><h1 style="color:blue; text-align:center;">Blue Center Heading</h1>
+    
+    <p style="background-color:tomato; color:white; padding:10px;">
+      This paragraph has a tomato background!
+    </p>
+    
+    <p style="font-family:verdana; font-size:20px;">
+      This text uses Verdana font and is big.
+    </p>
+    
+    <a href="#" style="text-decoration:none; color:gold;">I am a Gold Link</a></textarea>
+            </div>
+            <div class="preview-pane">
+              <div class="pane-header">Example Preview</div>
+              <iframe id="preview3" src="about:blank"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <!-- START EXAM BUTTON -->
+        <button id="start-btn-3" class="exam-btn" onclick="startExam(3)">⚡ Take Test to Unlock Level 4</button>
+
+        <!-- CHALLENGE LEVEL 3 -->
+        <div id="challenge-3" class="challenge-section">
+          <div class="theory-box"
+            style="border: 2px solid var(--accent-primary); background: rgba(59, 130, 246, 0.05);">
+            <h2>🎯 Level 3 Exam: Styles</h2>
+            <p><strong>Challenge:</strong> Ek <strong>Complete HTML Page</strong> banayein aur usme:</p>
+            <ul>
+              <li>✅ Ek paragraph <code>&lt;p&gt;</code> ho jiska color <strong>red</strong> ho.</li>
+            </ul>
+
+            <div class="editor-wrapper">
+              <div class="editor-pane">
+                <div class="pane-header">Your Answer</div>
+                <textarea id="exam-input-3" class="code-input"
+                  oninput="updatePreview(this, 'exam-preview-3')"></textarea>
+              </div>
+              <div class="preview-pane">
+                <div class="pane-header">Your Preview</div>
+                <iframe id="exam-preview-3" src="about:blank"></iframe>
+              </div>
+            </div>
+
+            <button onclick="checkLevel3()"
+              style="background: var(--accent-primary); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Submit
+              🔓</button>
+            <div id="result-3" style="margin-top:10px; font-weight:bold;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL 4 -->
+      <div id="level-4" class="level-container">
+        <h1 class="text-4xl text-white">4. Forms & Layouts (फॉर्म्स और लेआउट)</h1>
+
+        <div id="learn-content-4">
+          <div class="theory-box">
+            <h2>Semantic Elements (अर्थपूर्ण तत्व)</h2>
+            <p>Semantic elements ka naam unka matlab batata hai.</p>
+            <ul>
+              <li><code>&lt;header&gt;</code>: Page ka upari bhaag.</li>
+              <li><code>&lt;nav&gt;</code>: Navigation links.</li>
+              <li><code>&lt;section&gt;</code>: Content ka hissa.</li>
+              <li><code>&lt;article&gt;</code>: Swatantra lekh (Article).</li>
+              <li><code>&lt;aside&gt;</code>: Side bar content.</li>
+              <li><code>&lt;footer&gt;</code>: Page ka nichla bhaag.</li>
+            </ul>
+          </div>
+
+          <div class="theory-box">
+            <h2>HTML Forms (फॉर्म)</h2>
+            <p>Form ka use user se data lene ke liye hota hai.</p>
+            <ul>
+              <li><code>&lt;input type="text"&gt;</code>: Naam likhne ke liye.</li>
+              <li><code>&lt;input type="email"&gt;</code>: Email ke liye.</li>
+              <li><code>&lt;input type="password"&gt;</code>: Password (dot dot dikhega).</li>
+              <li><code>&lt;input type="radio"&gt;</code>: Options mein se ek chunne ke liye.</li>
+              <li><code>&lt;input type="checkbox"&gt;</code>: Ek se zyada chunne ke liye.</li>
+              <li><code>&lt;button&gt;</code>: Button banane ke liye.</li>
+            </ul>
+          </div>
+
+          <div class="editor-wrapper">
+            <div class="editor-pane">
+              <div class="pane-header">Example Code (Read Only)</div>
+              <textarea class="code-input" readonly style="background:#2d2d2d; color:#aaa;"><!-- Semantic Layout -->
+    <header style="background: #333; color: white; padding: 10px;">
+      <h2>Meri Website</h2>
+    </header>
+    
+    <main style="padding: 20px;">
+      <h3>Sampark Karein (Contact Us)</h3>
+      <form>
+        <label>Naam:</label><br>
+        <input type="text" placeholder="Apna naam likhein"><br><br>
+        
+        <label>Email:</label><br>
+        <input type="email" placeholder="example@gmail.com"><br><br>
+    
+        <button>Bhejein (Submit)</button>
+      </form>
+    </main>
+    
+    <footer style="background: #ccc; padding: 10px; margin-top: 20px;">
+      <small>&copy; 2026 ITI Student</small>
+    </footer>
+    </textarea>
+            </div>
+            <div class="preview-pane">
+              <div class="pane-header">Example Preview</div>
+              <iframe id="preview4" src="about:blank"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <!-- START EXAM BUTTON -->
+        <button id="start-btn-4" class="exam-btn" onclick="startExam(4)">⚡ Take Test to Unlock Level 5</button>
+
+        <!-- CHALLENGE LEVEL 4 -->
+        <div id="challenge-4" class="challenge-section">
+          <div class="theory-box"
+            style="border: 2px solid var(--accent-primary); background: rgba(59, 130, 246, 0.05);">
+            <h2>🎯 Level 4 Exam: Forms</h2>
+            <p><strong>Challenge:</strong> Ek <strong>Complete HTML Page</strong> likhein jisme Body ke andar:</p>
+            <ul>
+              <li>✅ Ek <code>&lt;input&gt;</code> ho jiska type "password" ho.</li>
+            </ul>
+
+            <div class="editor-wrapper">
+              <div class="editor-pane">
+                <div class="pane-header">Your Answer</div>
+                <textarea id="exam-input-4" class="code-input"
+                  oninput="updatePreview(this, 'exam-preview-4')"></textarea>
+              </div>
+              <div class="preview-pane">
+                <div class="pane-header">Your Preview</div>
+                <iframe id="exam-preview-4" src="about:blank"></iframe>
+              </div>
+            </div>
+
+            <button onclick="checkLevel4()"
+              style="background: var(--accent-primary); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">Submit
+              🔓</button>
+            <div id="result-4" style="margin-top:10px; font-weight:bold;"></div>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- LEVEL 5 -->
+      <div id="level-5" class="level-container">
+        <h1 class="text-4xl text-white">5. Lists & Tables (सूचियाँ और सारणियाँ)</h1>
+
+        <div class="theory-box">
+          <h2>HTML Lists (सूचियाँ)</h2>
+          <p>HTML में 3 प्रकार की Lists होती हैं:</p>
+          <ul>
+            <li><code>&lt;ul&gt;</code>: Unordered List (बिना नंबर वाली सूची - •).</li>
+            <li><code>&lt;ol&gt;</code>: Ordered List (नंबर वाली सूची - 1, 2, 3).</li>
+            <li><code>&lt;li&gt;</code>: List Item (सूची का एक पॉइंट).</li>
+          </ul>
+        </div>
+
+        <div class="theory-box">
+          <h2>HTML Tables (सारणियाँ)</h2>
+          <p>डेटा को Row (पंक्ति) और Column (स्तंभ) में दिखाने के लिए:</p>
+          <ul>
+            <li><code>&lt;table&gt;</code>: मुख्य कंटेनर (Main container).</li>
+            <li><code>&lt;tr&gt;</code>: Table Row (पंक्ति).</li>
+            <li><code>&lt;th&gt;</code>: Table Header (शीर्षक).</li>
+            <li><code>&lt;td&gt;</code>: Table Data (डेटा).</li>
+          </ul>
+        </div>
+
+        <div class="editor-wrapper">
+          <div class="editor-pane">
+            <div class="pane-header">HTML Input</div>
+            <textarea class="code-input" oninput="updatePreview(this, 'preview5')"><h3>Shopping List (खरीदारी सूची)</h3>
+<ul>
+  <li>Doodh (Milk)</li>
+  <li>Double Roti (Bread)</li>
+  <li>Makhan (Butter)</li>
+</ul>
+
+<h3>Top 3 Cities (शीर्ष 3 शहर)</h3>
+<ol>
+  <li>Mumbai</li>
+  <li>Delhi</li>
+  <li>Jaipur</li>
+</ol>
+
+<h3>Student Table (छात्र सारणी)</h3>
+<table border="1" width="100%">
+  <tr>
+    <th>Naam</th>
+    <th>Trade</th>
+  </tr>
+  <tr>
+    <td>Rahul</td>
+    <td>COPA</td>
+  </tr>
+  <tr>
+    <td>Amit</td>
+    <td>Elec.</td>
+  </tr>
+</table></textarea>
+          </div>
+          <div class="preview-pane">
+            <div class="pane-header">Live Preview</div>
+            <iframe id="preview5" src="about:blank"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL 6 -->
+      <div id="level-6" class="level-container">
+        <h1 class="text-4xl text-white">6. Div & Span (Grouping)</h1>
+
+        <div class="theory-box">
+          <h2>Block vs Inline Elements (ब्लॉक और इनलाइन)</h2>
+          <p><strong>Block Elements:</strong> हमेशा नई लाइन से शुरू होते हैं और पूरी चौड़ाई लेते हैं। (जैसे
+            <code>&lt;div&gt;, &lt;h1&gt;, &lt;p&gt;</code>)
+          </p>
+          <p><strong>Inline Elements:</strong> उसी लाइन में रहते हैं। (जैसे
+            <code>&lt;span&gt;, &lt;b&gt;, &lt;a&gt;</code>)
+          </p>
+        </div>
+
+        <div class="theory-box">
+          <h2>Div & Span</h2>
+          <ul>
+            <li><code>&lt;div&gt;</code>: एक बड़ा कंटेनर है। यह पेज के हिस्सों (Sections) को ग्रुप करने के काम आता है।
+            </li>
+            <li><code>&lt;span&gt;</code>: यह टेक्स्ट के छोटे हिस्से को स्टाइल करने के लिए होता है।</li>
+          </ul>
+        </div>
+
+        <div class="editor-wrapper">
+          <div class="editor-pane">
+            <div class="pane-header">HTML Input</div>
+            <textarea class="code-input" oninput="updatePreview(this, 'preview6')"><!-- Div Example (Block) -->
+<div style="background-color: #333; color: white; padding: 20px;">
+  <h2>Main Container</h2>
+  <p>Yeh sab kuch ek DIV ke andar hai.</p>
+</div>
+
+<!-- Span Example (Inline) -->
+<p>
+  Mera naam <span style="color: yellow; font-weight: bold;">Rahul</span> hai aur main ek student hoon.
+</p></textarea>
+          </div>
+          <div class="preview-pane">
+            <div class="pane-header">Live Preview</div>
+            <iframe id="preview6" src="about:blank"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL 7 -->
+      <div id="level-7" class="level-container">
+        <h1 class="text-4xl text-white">7. Metadata & Head (मेटाडाटा)</h1>
+
+        <div class="theory-box">
+          <h2>The Head Section</h2>
+          <p><code>&lt;head&gt;</code> के अंदर की जानकारी पेज पर नहीं दिखती, लेकिन ब्राउज़र के लिए जरूरी होती है।</p>
+          <ul>
+            <li><code>&lt;title&gt;</code>: ब्राउज़र टैब का नाम।</li>
+            <li><code>&lt;meta charset="UTF-8"&gt;</code>: भाषा को सही दिखाने के लिए।</li>
+            <li><code>&lt;link rel="icon"&gt;</code>: फेविकॉन (Favicon) लगाने के लिए।</li>
+            <li><code>&lt;style&gt;</code>: CSS लिखने के लिए।</li>
+          </ul>
+        </div>
+
+        <div class="editor-wrapper">
+          <div class="editor-pane">
+            <div class="pane-header">HTML Input</div>
+            <textarea class="code-input" oninput="updatePreview(this, 'preview7')"><!DOCTYPE html>
+<html>
+<head>
+  <title>Mera Page Title</title>
+  <!-- Internal CSS -->
+  <style>
+    body { background-color: #f0f0f0; }
+    h1 { color: blue; }
+  </style>
+</head>
+<body>
+
+<h1>Title Bar Dekhein!</h1>
+<p>Upar Browser tab me "Mera Page Title" dekhein.</p>
+<p>Yeh page CSS se style kiya gaya hai (Head me).</p>
+
+</body>
+</html></textarea>
+          </div>
+          <div class="preview-pane">
+            <div class="pane-header">Live Preview</div>
+            <iframe id="preview7" src="about:blank"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEVEL 8 -->
+      <div id="level-8" class="level-container">
+        <h1 class="text-4xl text-white">8. Complete Project (पूरा प्रोजेक्ट)</h1>
+
+        <div class="theory-box">
+          <h2>Final Practice (अंतिम अभ्यास)</h2>
+          <p>Ab humne sab kuch seekh liya hai. Chaliye ek CV/Resume banate hain jisme sab kuch use hoga:</p>
+          <ul>
+            <li>Headings, Paragraphs</li>
+            <li>Lists, Tables</li>
+            <li>Images, Links</li>
+            <li>Forms</li>
+          </ul>
+        </div>
+
+        <div class="editor-wrapper">
+          <div class="editor-pane">
+            <div class="pane-header">HTML Input</div>
+            <textarea class="code-input" oninput="updatePreview(this, 'preview8')"><header style="text-align:center; background:#eee; padding:20px;">
+  <h1>Rahul Kumar</h1>
+  <p>COPA Student (ITI Jodhpur)</p>
+</header>
+
+<!-- About -->
+<section style="padding:20px;">
+  <h2>Mere Baare Mein</h2>
+  <p>Main ek ITI student hoon aur HTML seekh raha hoon.</p>
+</section>
+
+<!-- Skills -->
+<section style="padding:20px; background:#fafafa;">
+  <h2>Hunar (Skills)</h2>
+  <ul>
+    <li>HTML5 & CSS3</li>
+    <li>Computer Basics</li>
+  </ul>
+</section>
+
+<!-- Contact Form -->
+<section style="padding:20px;">
+  <h2>Sampark Karein</h2>
+  <form>
+    <input type="text" placeholder="Apna naam likhein">
+    <button>Bhejein</button>
+  </form>
+</section>
+
+<footer style="text-align:center; padding:10px; background:#333; color:white;">
+  &copy; 2026 Rahul Kumar
+</footer></textarea>
+          </div>
+          <div class="preview-pane">
+            <div class="pane-header">Live Preview</div>
+            <iframe id="preview8" src="about:blank"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- CUSTOM MODAL HTML -->
+  <div id="examModal" class="modal-overlay">
+    <div class="exam-modal">
+      <h3 id="modalTitle">Ready for Exam?</h3>
+      <p id="modalMsg">Content will be blurred and cheating is not allowed.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button id="modalConfirmBtn" class="btn-primary">Yes, Start!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD MODAL -->
+  <div id="leaderboardModal" class="modal-overlay" style="display:none;">
+    <div class="exam-modal" style="width: 400px;">
+      <h3>🏆 Leaderboard</h3>
+      <div id="leaderboardList" style="text-align:left; margin: 15px 0; max-height: 300px; overflow-y:auto;">
+        <p>Loading top students...</p>
+      </div>
+      <button class="btn-secondary"
+        onclick="document.getElementById('leaderboardModal').style.display='none'">Close</button>
+    </div>
+  </div>
+
+  <!-- PROFILE MODAL -->
+  <div id="profileModal" class="modal-overlay" style="display:none;">
+    <div class="exam-modal" style="width: 400px;">
+      <h3>👤 Student Profile</h3>
+      <div style="text-align:left; margin: 20px 0; background: rgba(0,0,0,0.05); padding: 15px; border-radius: 8px;">
+        <p><strong>Name:</strong> <span id="profileName">Loading...</span></p>
+        <p><strong>Email:</strong> <span id="profileEmail">Loading...</span></p>
+        <p><strong>Current Level:</strong> <span id="profileLevel">Loading...</span></p>
+        <p><strong>Joined:</strong> <span id="profileJoined">Loading...</span></p>
+      </div>
+      <button class="btn-primary" onclick="showResetPasswordModal()" style="margin-bottom:10px; width:100%;">🔐 Reset
+        Password</button>
+      <button class="btn-secondary"
+        onclick="document.getElementById('profileModal').style.display='none'">Close</button>
+    </div>
+  </div>
+
+  <!-- RESET PASSWORD MODAL (FROM PROFILE) -->
+  <div id="resetPasswordModal" class="modal-overlay" style="display:none;">
+    <div class="exam-modal" style="width: 450px;">
+      <h3>🔐 Reset Password</h3>
+
+      <div id="reset-step-1">
+        <p style="color: #cbd5e1; margin-bottom: 15px;">
+          An OTP will be sent to your registered email: <br>
+          <strong id="reset-user-email" style="color: var(--accent-primary);"></strong>
+        </p>
+        <button class="btn-primary" onclick="sendOTPFromProfile()" style="width:100%;">
+          📧 Send OTP
+        </button>
+      </div>
+
+      <div id="reset-step-2" class="hidden">
+        <div style="padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; margin-bottom: 15px;">
+          <p style="margin: 0; font-size: 0.9rem; color: #60a5fa;">
+            📧 OTP sent to your email!
+          </p>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display:block; margin-bottom:5px; color:#cbd5e1;">Enter 8-Digit OTP</label>
+          <input type="text" id="reset-otp" placeholder="Enter 8-digit code" maxlength="8"
+            style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:white;">
+        </div>
+
+        <button class="btn-primary" onclick="verifyOTPOnlyFromProfile()" style="width:100%; margin-bottom:10px;">
+          ✅ Verify OTP
+        </button>
+        <button class="btn-secondary" onclick="showResetStep1()" style="width:100%;">
+          ← Back
+        </button>
+      </div>
+
+      <div id="reset-step-3" class="hidden">
+        <div style="padding: 10px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; margin-bottom: 15px;">
+          <p style="margin: 0; font-size: 0.9rem; color: #4ade80;">
+            ✅ OTP Verified! Now set your new password.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display:block; margin-bottom:5px; color:#cbd5e1;">New Password</label>
+          <input type="password" id="reset-new-pass" placeholder="Enter new password"
+            style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:white;">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="display:block; margin-bottom:5px; color:#cbd5e1;">Confirm Password</label>
+          <input type="password" id="reset-confirm-pass" placeholder="Confirm new password"
+            style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:white;">
+        </div>
+
+        <button class="btn-primary" onclick="updatePasswordAfterVerificationFromProfile()"
+          style="width:100%; margin-bottom:10px;">
+          🔐 Update Password
+        </button>
+      </div>
+
+      <div id="reset-msg" style="margin-top: 15px; font-size: 0.9rem;"></div>
+
+      <button class="btn-secondary" onclick="closeResetPasswordModal()" style="width:100%; margin-top:10px;">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- AUTH MODAL HTML -->
+  <div id="authModal" class="auth-modal-overlay">
+    <div class="auth-box">
+      <h2 style="margin-bottom: 1rem;">Login / Register</h2>
+      <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 1rem;">Progress save karne ke liye login karein.</p>
+
+      <input type="email" id="authEmail" class="auth-input" placeholder="Email Address">
+      <input type="password" id="authPass" class="auth-input" placeholder="Password">
+
+      <div style="text-align: right; margin-bottom: 10px;">
+        <span onclick="handleResetPassword()"
+          style="color:var(--accent-primary); cursor:pointer; font-size:0.8rem; text-decoration:underline;">Forgot
+          Password?</span>
+      </div>
+
+      <button onclick="handleLogin()" class="btn-primary" style="width:100%;">Login / Sign Up</button>
+
+      <button onclick="document.getElementById('authModal').style.display='none'"
+        style="background:none; border:none; color:#f87171; margin-top:1rem; cursor:pointer;">
+        Cancel
+      </button>
+
+      <div id="authMsg" style="margin-top: 1rem; font-size: 0.8rem;"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- UTILS: Custom Modal Logic --- 
+    let currentModalAction = null;
+    // Note: currentUser and supabaseClient are declared in supabaseClient.js
+
+    // --- LOGOUT FUNCTION ---
+    async function handleLogout() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+        window.location.href = 'index.html';
+      }
+    }
+
+    function showModal(title, msg, onConfirm, isAlert = false) {
+      document.querySelector('#examModal h3').innerText = title;
+      document.querySelector('#examModal p').innerHTML = msg; // Supports HTML msg
+
+      const confirmBtn = document.getElementById('modalConfirmBtn');
+      const secondaryBtn = document.querySelector('.exam-modal .btn-secondary');
+
+      // Reset
+      confirmBtn.onclick = null;
+
+      if (isAlert) {
+        if (secondaryBtn) secondaryBtn.style.display = 'none';
+        confirmBtn.innerText = "OK";
+        confirmBtn.onclick = closeModal;
+      } else {
+        if (secondaryBtn) secondaryBtn.style.display = 'inline-block';
+        confirmBtn.innerText = "Let's Go! 🚀";
+        confirmBtn.onclick = () => {
+          if (onConfirm) onConfirm();
+          closeModal();
+        };
+      }
+
+      document.getElementById('examModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('examModal').style.display = 'none';
+    }
+  </script>
+
+  <!-- SUPABASE IMPORTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabaseClient.js"></script>
+
+  <script>
+    // --- AUTH LOGIC ---
+
+    // --- AUTH LOGIC ---
+    async function handleLogin() {
+      if (!supabaseClient) { alert("System connecting... please wait."); return; }
+
+      const email = document.getElementById('authEmail').value;
+      const pass = document.getElementById('authPass').value;
+      const msg = document.getElementById('authMsg');
+
+      if (!email || !pass) { msg.innerHTML = '<span style="color:red">Email & Pass required</span>'; return; }
+
+      msg.innerHTML = '<span style="color:yellow">Checking...</span>';
+
+      // 1. Try Login
+      let { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+
+      // 2. If Login Fails (Invalid credentials), Try Sign Up
+      if (error && (error.message.includes("Invalid login") || error.message.includes("credentials"))) {
+        console.warn("Login failed, trying signup...");
+
+        const signUpRes = await supabaseClient.auth.signUp({ email, password: pass });
+
+        if (signUpRes.error) {
+          // If Signup also fails...
+          if (signUpRes.error.message.includes("already registered")) {
+            msg.innerHTML = '<span style="color:orange">Account exists! Wrong Password.</span>';
+          } else {
+            msg.innerHTML = `<span style="color:red">${signUpRes.error.message}</span>`;
+          }
+        } else {
+          // Signup Success
+          if (signUpRes.data.user && !signUpRes.data.session) {
+            msg.innerHTML = '<span style="color:orange">Check email for confirmation link!</span>';
+          } else {
+            msg.innerHTML = '<span style="color:green">Account Created! Logging in...</span>';
+            setTimeout(() => {
+              document.getElementById('authModal').style.display = 'none';
+              window.location.reload();
+            }, 1000);
+          }
+        }
+      }
+      else if (error) {
+        msg.innerHTML = `<span style="color:red">${error.message}</span>`;
+      }
+      else {
+        // Login Success
+        document.getElementById('authModal').style.display = 'none';
+        msg.innerHTML = '';
+      }
+    }
+
+    async function handleResetPassword() {
+      if (!supabaseClient) return;
+      const email = document.getElementById('authEmail').value;
+      const msg = document.getElementById('authMsg');
+
+      if (!email) {
+        msg.innerHTML = '<span style="color:red">Please enter your Email first.</span>';
+        return;
+      }
+
+      msg.innerHTML = '<span style="color:yellow">Sending Reset Link...</span>';
+      const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email);
+
+      if (error) {
+        msg.innerHTML = `<span style="color:red">${error.message}</span>`;
+      } else {
+        msg.innerHTML = '<span style="color:#4ade80;">Reset link sent to your email! 📩</span>';
+      }
+    }
+
+    async function handleLogout() {
+      if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+        window.location.href = 'index.html';
+      }
+    }
+
+    // --- PROGRESS LOGIC ---
+    async function saveProgress(level) {
+      if (!currentUser) return; // Only save if logged in
+
+      // Upsert progress
+      try {
+        const { error } = await supabaseClient
+          .from('user_progress')
+          .upsert({ user_id: currentUser.id, level: level }, { onConflict: 'user_id' });
+
+        if (error) console.error("Save Error:", error);
+        else console.log("Progress Saved:", level);
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadProgress() {
+      if (!currentUser) return;
+
+      let { data, error } = await supabaseClient
+        .from('user_progress')
+        .select('level')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (data && data.level) {
+        console.log("Restoring Level:", data.level);
+        // Unlock all levels up to data.level
+        for (let i = 2; i <= data.level; i++) {
+          const btn = document.getElementById(`btn-${i}`);
+          if (btn && btn.classList.contains('locked')) {
+            btn.classList.remove('locked');
+            btn.innerHTML = btn.innerHTML.replace('🔒', '');
+          }
+        }
+        // Show the highest unlocked level
+        showLevel(data.level);
+      }
+    }
+
+    // --- POINTS SYSTEM ---
+    function calculatePointsForLevel(level) {
+      // Level point awards: L1=20, L2=30, L3=40, L4=50, L5=60, L6=70, L7=80, L8=100
+      if (level === 8) return 100;
+      return (level * 10) + 10;
+    }
+
+    function calculateTotalPoints(completedLevel) {
+      let total = 0;
+      for (let i = 1; i <= completedLevel; i++) {
+        total += calculatePointsForLevel(i);
+      }
+      return total;
+    }
+
+    // --- PROGRESS LOGIC ---
+    async function saveProgress(level) {
+      if (!window.currentUser) return; // Only save if logged in
+
+      const totalPoints = calculateTotalPoints(level);
+
+      // Upsert progress with total_points
+      try {
+        const { error } = await window.supabaseClient
+          .from('user_progress')
+          .upsert({
+            user_id: window.currentUser.id,
+            level: level,
+            total_points: totalPoints
+          }, { onConflict: 'user_id' });
+
+        if (error) console.error("Save Error:", error);
+        else console.log(`Progress Saved: Level ${level}, ${totalPoints} TG Points`);
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadProgress() {
+      if (!window.currentUser) return;
+
+      let { data, error } = await window.supabaseClient
+        .from('user_progress')
+        .select('level, total_points')
+        .eq('user_id', window.currentUser.id)
+        .single();
+
+      if (data && data.level) {
+        console.log(`Restoring: Level ${data.level}, ${data.total_points || 0} TG Points`);
+        // Unlock all levels up to data.level
+        for (let i = 2; i <= data.level; i++) {
+          const btn = document.getElementById(`btn-${i}`);
+          if (btn && btn.classList.contains('locked')) {
+            btn.classList.remove('locked');
+            btn.innerHTML = btn.innerHTML.replace('🔒', '');
+          }
+        }
+        // Show the highest unlocked level
+        showLevel(data.level);
+      }
+    }
+
+    function showModal(title, msg, onConfirm, isAlert = false) {
+      document.querySelector('#examModal h3').innerText = title;
+      document.querySelector('#examModal p').innerHTML = msg; // Supports HTML msg
+
+      const confirmBtn = document.getElementById('modalConfirmBtn');
+      const secondaryBtn = document.querySelector('.exam-modal .btn-secondary');
+
+      // Reset
+      confirmBtn.onclick = null;
+
+      if (isAlert) {
+        if (secondaryBtn) secondaryBtn.style.display = 'none';
+        confirmBtn.innerText = "OK";
+        confirmBtn.onclick = closeModal;
+      } else {
+        if (secondaryBtn) secondaryBtn.style.display = 'inline-block';
+        confirmBtn.innerText = "Let's Go! 🚀";
+        confirmBtn.onclick = () => {
+          if (onConfirm) onConfirm();
+          closeModal();
+        };
+      }
+
+      document.getElementById('examModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('examModal').style.display = 'none';
+    }
+
+    // --- NAVIGATION LOGIC ---
+    function showLevel(level) {
+      // Hide all levels
+      document.querySelectorAll('.level-container').forEach(el => el.classList.remove('active'));
+      // Show selected
+      document.getElementById('level-' + level).classList.add('active');
+
+      // Update sidebar active state
+      document.querySelectorAll('.nav-btn').forEach((btn, idx) => {
+        if (idx + 1 === level) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+
+      // Trigger preview update for the new level
+      const activeTextarea = document.querySelector(`#level-${level} textarea`);
+      const activePreviewId = `preview${level}`;
+      if (activeTextarea) {
+        updatePreview(activeTextarea, activePreviewId);
+      }
+    }
+
+    // --- LIVE EDITOR LOGIC ---
+    function updatePreview(textarea, iframeId) {
+      const code = textarea.value;
+      const iframe = document.getElementById(iframeId);
+      if (iframe) {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(code);
+        doc.close();
+      }
+    }
+
+    // --- INITIALIZATION ---
+    window.onload = () => {
+      // Initialize previews for all levels
+      for (let i = 1; i <= 8; i++) {
+        const ta = document.querySelector(`#level-${i} textarea`);
+        if (ta) {
+          updatePreview(ta, `preview${i}`);
+        }
+      }
+    };
+
+    // Check Session & Auth Guard
+    function checkSession() {
+      if (window.supabaseClient) {
+        window.supabaseClient.auth.onAuthStateChange((event, session) => {
+          const authDiv = document.getElementById('authActions');
+          if (session) {
+            window.currentUser = session.user;
+            authDiv.innerHTML = `<span style="font-size:0.8rem; margin-right:10px;">👤 ${session.user.email}</span>`;
+            loadProgress();
+          } else {
+            // NOT LOGGED IN? Redirect to Login Page
+            window.location.href = 'index.html';
+          }
+        });
+      }
+    }
+
+    // --- EXAM & UNLOCK LOGIC ---
+    function unlockLevel(nextLevelId) {
+      // Save Progress to Cloud
+      saveProgress(nextLevelId);
+
+      const currentLevelId = nextLevelId - 1;
+
+      // 1. Unblur the current level's content so they can read it again
+      const currentContent = document.getElementById(`learn-content-${currentLevelId}`);
+      if (currentContent) {
+        currentContent.classList.remove('blurred-content');
+      }
+
+      // 2. Hide the exam section (optional, or keep it open with success message)
+      // For now, we leave it open but they can scroll up.
+
+      const btn = document.getElementById(`btn-${nextLevelId}`);
+      if (btn) {
+        btn.classList.remove('locked');
+        btn.innerHTML = btn.innerHTML.replace('🔒', '');
+
+        setTimeout(() => {
+          showModal(
+            `🎉 Level ${currentLevelId} Completed!`,
+            "Badhai ho! Aapne shandaar kaam kiya hai. Agla level ab khul gaya hai.",
+            () => {
+              showLevel(nextLevelId);
+            },
+            false // Show "Let's Go" (not just OK) to encourage moving next
+          );
+        }, 500);
+      }
+    }
+
+    // Helper to check full HTML structure
+    function checkStructure(code) {
+      const hasDoctype = code.includes('<!doctype html>');
+      const hasHtml = code.includes('<html>') && code.includes('</html>');
+      const hasHead = code.includes('<head>') && code.includes('</head>');
+      const hasBody = code.includes('<body>') && code.includes('</body>');
+
+      if (!hasDoctype || !hasHtml || !hasHead || !hasBody) {
+        return {
+          valid: false,
+          msg: `<div style="color: #f87171;">❌ Code Adhura Hai:</div>
+      <ul style="color: #fca5a5; font-size: 0.9rem; text-align:left;">
+        ${!hasDoctype ? '<li>DocType missing hai (<code>&lt;!DOCTYPE html&gt;</code>)</li>' : ''}
+        ${!hasHtml ? '<li>HTML tag missing hai (<code>&lt;html&gt;</code>)</li>' : ''}
+        ${!hasHead ? '<li>Head tag missing hai (<code>&lt;head&gt;</code>)</li>' : ''}
+        ${!hasBody ? '<li>Body tag missing hai (<code>&lt;body&gt;</code>)</li>' : ''}
+      </ul>`
+        };
+      }
+      return { valid: true };
+    }
+
+    function checkLevel1() {
+      const code = document.querySelector('#exam-input-1').value.toLowerCase();
+      const resultBox = document.getElementById('result-1');
+
+      // 1. Structure Check
+      const structure = checkStructure(code);
+      if (!structure.valid) {
+        resultBox.innerHTML = structure.msg;
+        return;
+      }
+
+      // 2. Specific Level Checks
+      const hasTitle = code.includes('<title>exam pass</title>');
+      const hasH1 = code.includes('<h1>') && code.includes('</h1>');
+
+      if (hasTitle && hasH1) {
+        resultBox.innerHTML = '<span style="color: #4ade80;">✅ Correct! Level 2 Unlocking...</span>';
+        unlockLevel(2);
+      } else {
+        resultBox.innerHTML = `<span style="color: #f87171;">❌ Title 'Exam Pass' hona chahiye aur ek H1 tag zaroori hai.</span>`;
+      }
+    }
+
+    function checkLevel2() {
+      const code = document.querySelector('#exam-input-2').value.toLowerCase();
+      const res = document.getElementById('result-2');
+
+      const structure = checkStructure(code);
+      if (!structure.valid) { res.innerHTML = structure.msg; return; }
+
+      if (code.includes('<h2>') && code.includes('<hr>')) {
+        res.innerHTML = '<span style="color:#4ade80;">✅ Correct! Next Level...</span>';
+        unlockLevel(3);
+      } else {
+        res.innerHTML = '<span style="color:#f87171;">❌ H2 ya HR tag missing hai.</span>';
+      }
+    }
+
+    function checkLevel3() {
+      const code = document.querySelector('#exam-input-3').value.toLowerCase();
+      const res = document.getElementById('result-3');
+
+      const structure = checkStructure(code);
+      if (!structure.valid) { res.innerHTML = structure.msg; return; }
+
+      if (code.includes('color:') && code.includes('red')) {
+        res.innerHTML = '<span style="color:#4ade80;">✅ Correct! Next Level...</span>';
+        unlockLevel(4);
+      } else {
+        res.innerHTML = '<span style="color:#f87171;">❌ Color RED set karein style attribute se.</span>';
+      }
+    }
+
+    function checkLevel4() {
+      const code = document.querySelector('#exam-input-4').value.toLowerCase();
+      const res = document.getElementById('result-4');
+
+      const structure = checkStructure(code);
+      if (!structure.valid) { res.innerHTML = structure.msg; return; }
+
+      if (code.includes('type="password"') || code.includes("type='password'")) {
+        res.innerHTML = '<span style="color:#4ade80;">✅ Correct! Next Level...</span>';
+        unlockLevel(5);
+      } else {
+        res.innerHTML = '<span style="color:#f87171;">❌ Input type "password" hona chahiye.</span>';
+      }
+    }
+
+    // --- ANTI-CHEATING LOGIC ---
+    function startExam(levelId) {
+      // 0. Check Login
+      if (!currentUser) {
+        showModal(
+          "Login Required 🔒",
+          "Test shuru karne aur progress save karne ke liye Login zaroori hai.",
+          () => {
+            document.getElementById('authModal').style.display = 'flex';
+          }
+        );
+        return;
+      }
+
+      showModal(
+        "Ready for Exam? 🧐",
+        "Exam shuru hone par upar ka sara content BLUR ho jayega. Cheating allowed nahi hai! Kya aap taiyar hain?",
+        () => {
+          // Confirm Action
+          const contentDiv = document.getElementById(`learn-content-${levelId}`);
+          if (contentDiv) {
+            contentDiv.classList.add('blurred-content');
+          }
+
+          const startBtn = document.getElementById(`start-btn-${levelId}`);
+          if (startBtn) {
+            startBtn.style.display = 'none';
+          }
+
+          const challengeDiv = document.getElementById(`challenge-${levelId}`);
+          if (challengeDiv) {
+            challengeDiv.style.display = 'block';
+            challengeDiv.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      );
+    }
+
+    // --- NEW FEATURE: PROFILE ---
+    function showProfile() {
+      if (!window.currentUser) {
+        alert("Please login first to view your profile!");
+        return;
+      }
+
+      const meta = window.currentUser.user_metadata || {};
+
+      const profileName = document.getElementById('profileName');
+      const profileEmail = document.getElementById('profileEmail');
+      const profileJoined = document.getElementById('profileJoined');
+      const profileLevel = document.getElementById('profileLevel');
+
+      if (profileName) profileName.innerText = meta.full_name || "Student";
+      if (profileEmail) profileEmail.innerText = window.currentUser.email;
+      if (profileJoined) profileJoined.innerText = new Date(window.currentUser.created_at).toLocaleDateString();
+
+      // Get Level from UI or fetch
+      const activeBtn = document.querySelector('.nav-btn.active');
+      const currentLevel = activeBtn ? activeBtn.innerText : "1";
+      if (profileLevel) profileLevel.innerText = currentLevel;
+
+      const profileModal = document.getElementById('profileModal');
+      if (profileModal) profileModal.style.display = 'flex';
+    }
+
+    // --- NEW FEATURE: LEADERBOARD ---
+    async function showLeaderboard() {
+      const modal = document.getElementById('leaderboardModal');
+      if (!modal) return;
+
+      modal.style.display = 'flex';
+      const listDiv = document.getElementById('leaderboardList');
+      if (listDiv) listDiv.innerHTML = '<p>Fetching top ranks...</p>';
+
+      try {
+        if (!window.supabaseClient) throw new Error("Supabase not connected");
+
+        // Fetch top 10 by total_points
+        const { data, error } = await window.supabaseClient
+          .from('user_progress')
+          .select('level, user_id, total_points')
+          .order('total_points', { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          if (listDiv) listDiv.innerHTML = '<p>No records found yet.</p>';
+          return;
+        }
+
+        let html = '<ul style="list-style:none; padding:0;">';
+        data.forEach((row, index) => {
+          const isMe = window.currentUser && row.user_id === window.currentUser.id;
+          const rankColor = index === 0 ? 'gold' : (index === 1 ? 'silver' : (index === 2 ? '#cd7f32' : '#333'));
+          const pushedName = isMe ? "👉 YOU" : `Student ${row.user_id.slice(0, 4)}...`;
+          const points = row.total_points || 0;
+
+          html += `
+            <li style="display:flex; justify-content:space-between; padding: 8px; border-bottom:1px solid #eee; background: ${isMe ? '#e0f2fe' : 'transparent'}">
+              <span><strong style="color:${rankColor}">#${index + 1}</strong> ${pushedName}</span>
+              <span style="font-weight:bold; color: var(--accent-primary);">${points} TG</span>
+            </li>
+          `;
+        });
+        html += '</ul>';
+        if (listDiv) listDiv.innerHTML = html;
+
+      } catch (err) {
+        console.error(err);
+        if (listDiv) listDiv.innerHTML = '<p style="color:red">Failed to load leaderboard.</p>';
+      }
+    }
+
+    // --- RESET PASSWORD FROM PROFILE ---
+    function showResetPasswordModal() {
+      if (!window.currentUser) {
+        alert("Please login first!");
+        return;
+      }
+
+      const modal = document.getElementById('resetPasswordModal');
+      const emailSpan = document.getElementById('reset-user-email');
+
+      if (emailSpan) emailSpan.innerText = window.currentUser.email;
+      if (modal) modal.style.display = 'flex';
+
+      // Reset to step 1
+      showResetStep1();
+    }
+
+    function showResetStep1() {
+      document.getElementById('reset-step-1').classList.remove('hidden');
+      document.getElementById('reset-step-2').classList.add('hidden');
+      document.getElementById('reset-step-3').classList.add('hidden');
+      document.getElementById('reset-msg').innerHTML = '';
+    }
+
+    function closeResetPasswordModal() {
+      document.getElementById('resetPasswordModal').style.display = 'none';
+      // Clear fields
+      document.getElementById('reset-otp').value = '';
+      document.getElementById('reset-new-pass').value = '';
+      document.getElementById('reset-confirm-pass').value = '';
+    }
+
+    async function sendOTPFromProfile() {
+      if (!window.currentUser) return;
+
+      const email = window.currentUser.email;
+      const msg = document.getElementById('reset-msg');
+
+      msg.style.color = '#4ade80';
+      msg.innerText = 'Sending OTP...';
+
+      try {
+        const { data, error } = await window.supabaseClient.auth.signInWithOtp({
+          email: email
+        });
+
+        if (error) {
+          msg.style.color = '#f87171';
+          msg.innerText = 'Failed to send OTP: ' + error.message;
+        } else {
+          msg.style.color = '#4ade80';
+          msg.innerText = '✅ OTP sent to your email!';
+
+          // Show step 2
+          document.getElementById('reset-step-1').classList.add('hidden');
+          document.getElementById('reset-step-2').classList.remove('hidden');
+        }
+      } catch (err) {
+        msg.style.color = '#f87171';
+        msg.innerText = 'Error sending OTP. Please try again.';
+        console.error(err);
+      }
+    }
+
+    async function verifyOTPAndResetFromProfile() {
+      if (!window.currentUser) return;
+
+      const email = window.currentUser.email;
+      const otp = document.getElementById('reset-otp').value.trim();
+      const newPass = document.getElementById('reset-new-pass').value;
+      const confirmPass = document.getElementById('reset-confirm-pass').value;
+      const msg = document.getElementById('reset-msg');
+
+      // Validation
+      if (!otp) {
+        msg.style.color = '#f87171';
+        msg.innerText = 'Please enter the OTP.';
+        return;
+      }
+
+      if (!newPass || newPass.length < 6) {
+        msg.style.color = '#f87171';
+        msg.innerText = 'Password must be at least 6 characters.';
+        return;
+      }
+
+      if (newPass !== confirmPass) {
+        msg.style.color = '#f87171';
+        msg.innerText = 'Passwords do not match!';
+        return;
+      }
+
+      msg.style.color = '#4ade80';
+      msg.innerText = 'Verifying OTP...';
+
+      try {
+        // Verify OTP
+        const { data, error } = await window.supabaseClient.auth.verifyOtp({
+          email: email,
+          token: otp,
+          type: 'email'
+        });
+
+        if (error) {
+          msg.style.color = '#f87171';
+          if (error.message.includes('expired')) {
+            msg.innerText = 'OTP expired. Please request a new one.';
+            setTimeout(() => showResetStep1(), 2000);
+          } else {
+            msg.innerText = 'Invalid OTP. Please try again.';
+          }
+          return;
+        }
+
+        // Update password
+        const { error: updateError } = await window.supabaseClient.auth.updateUser({
+          password: newPass
+        });
+
+        if (updateError) {
+          msg.style.color = '#f87171';
+          msg.innerText = 'Failed to update password: ' + updateError.message;
+        } else {
+          msg.style.color = '#4ade80';
+          msg.innerText = '✅ Password updated successfully!';
+
+          setTimeout(() => {
+            closeResetPasswordModal();
+            document.getElementById('profileModal').style.display = 'none';
+          }, 2000);
+        }
+      } catch (err) {
+        msg.style.color = '#f87171';
+        msg.innerText = 'Error updating password. Please try again.';
+        console.error(err);
+      }
+    }
+
+    // Initialize session check on page load
+    checkSession();
+  </script>
+</body>
+
+</html>
